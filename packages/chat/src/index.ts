@@ -5,5 +5,6 @@
  * @module chat
  */
 
-// export * from './tokens';
 export * from './chatpanel';
+export * from './rtcConnection';
+export * from './tokens';

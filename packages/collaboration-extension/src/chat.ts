@@ -13,7 +13,34 @@ import {
 import { DOMUtils } from '@jupyterlab/apputils';
 import { ITranslator, nullTranslator } from '@jupyterlab/translation';
 
-import { chatIcon, ChatPanel } from '@jupyter/chat';
+import {
+  CommandIDs,
+  chatIcon,
+  ChatPanel,
+  IRTCConnection,
+  RTCConnection
+} from '@jupyter/chat';
+import { IGlobalAwareness } from '@jupyter/collaboration';
+import { Awareness } from 'y-protocols/awareness';
+
+/**
+ * The webRTC provider.
+ */
+export const webRTCConnection: JupyterFrontEndPlugin<IRTCConnection> = {
+  id: '@jupyter/collaboration-extension:rtcProvider',
+  description: 'The webRTC connection',
+  autoStart: true,
+  provides: IRTCConnection,
+  activate: (app: JupyterFrontEnd): IRTCConnection => {
+    const { user } = app.serviceManager;
+    const connection = new RTCConnection();
+
+    Promise.all([app.restored, user.ready]).then(() => {
+      connection.login(user.identity!.username);
+    });
+    return connection;
+  }
+};
 
 /**
  * The default collaborative chat panel.
@@ -21,22 +48,62 @@ import { chatIcon, ChatPanel } from '@jupyter/chat';
 export const chat: JupyterFrontEndPlugin<void> = {
   id: '@jupyter/collaboration-extension:chat',
   description: 'The default chat panel',
+  requires: [IGlobalAwareness, IRTCConnection],
   optional: [ITranslator, ILayoutRestorer],
   autoStart: true,
   activate: (
     app: JupyterFrontEnd,
+    awareness: Awareness,
+    rtcConnection: IRTCConnection,
     translator: ITranslator,
     restorer: ILayoutRestorer
   ): void => {
     const { user } = app.serviceManager;
     const trans = (translator ?? nullTranslator).load('jupyter_collaboration');
 
-    const panel = new ChatPanel({ translator, currentUser: user });
+    const panel = new ChatPanel({
+      translator,
+      currentUser: user,
+      awareness: awareness,
+      send: rtcConnection.sendMessage
+    });
+
+    rtcConnection.setReceivedMessage(panel.onMessageReceived);
     panel.id = DOMUtils.createDomID();
     panel.title.caption = trans.__('Collaboration');
     panel.title.icon = chatIcon;
     app.shell.add(panel, 'right', { rank: 300 });
 
     restorer.add(panel, 'chat-panel');
+  }
+};
+
+/**
+ * The chat commands.
+ */
+export const chatCommands: JupyterFrontEndPlugin<void> = {
+  id: '@jupyter/collaboration-extension:chat-commands',
+  description: 'The default chat commands',
+  requires: [IRTCConnection],
+  optional: [ITranslator],
+  autoStart: true,
+  activate: (
+    app: JupyterFrontEnd,
+    rtcConnection: IRTCConnection,
+    translator: ITranslator
+  ) => {
+    const { commands } = app;
+    const trans = (translator ?? nullTranslator).load('jupyter_collaboration');
+
+    commands.addCommand(CommandIDs.offer, {
+      label: trans.__('Offer chat communication'),
+      execute: async args => {
+        const user = (args?.user as string) || undefined;
+        if (user) {
+          rtcConnection.handleConnection(user);
+        }
+        console.log(user);
+      }
+    });
   }
 };

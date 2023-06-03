@@ -22,13 +22,14 @@ import {
   userEditorCursors
 } from './collaboration';
 import { sharedLink } from './sharedlink';
-import { chat } from './chat';
+import { chat, chatCommands, webRTCConnection } from './chat';
 
 /**
  * Export the plugins as default.
  */
 const plugins: JupyterFrontEndPlugin<any>[] = [
   chat,
+  chatCommands,
   drive,
   yfile,
   ynotebook,
@@ -38,6 +39,7 @@ const plugins: JupyterFrontEndPlugin<any>[] = [
   menuBarPlugin,
   rtcGlobalAwarenessPlugin,
   rtcPanelPlugin,
+  webRTCConnection,
   sharedLink,
   userEditorCursors
 ];

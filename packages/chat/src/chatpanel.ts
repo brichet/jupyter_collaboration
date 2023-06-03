@@ -5,6 +5,8 @@ import { User } from '@jupyterlab/services';
 import { ITranslator } from '@jupyterlab/translation';
 import { LabIcon, SidePanel, caretRightIcon } from '@jupyterlab/ui-components';
 import { Panel, Widget } from '@lumino/widgets';
+import { Awareness } from 'y-protocols/awareness';
+import { ICollaboratorAwareness } from '@jupyter/collaboration';
 
 import chatSvgstr from '../style/icons/chat.svg';
 
@@ -26,41 +28,64 @@ export class ChatPanel extends SidePanel {
   constructor(options: ChatPanel.IOptions) {
     super({ content: new Panel(), translator: options.translator });
     this._user = options.currentUser;
+    this._awareness = options.awareness;
+    this._send = options.send;
     this.addClass('jp-ChatPanel');
 
     this._messages.addClass('jp-ChatPanel-messages');
     this.addWidget(this._messages);
     this.addWidget(new Widget({ node: this._prompt }));
+
+    console.log('USER', options.currentUser);
+    console.log('awarness', options.awareness);
+    this._awareness.on('change', this._onAwarenessChanged);
   }
 
   /**
    * Add a new message in the list.
    * @param messageContent - Content and metadata of the message.
    */
-  onMessageReceived(messageContent: ChatPanel.IMessage): void {
+  onMessageReceived = (messageContent: string): void => {
+    const message = JSON.parse(messageContent) as ChatPanel.IMessage;
+    message.date = new Date(message.date);
+
     let index = this._messages.widgets.length;
     for (const msg of this._messages.widgets.slice(1).reverse()) {
-      if (messageContent.date > (msg as ChatMessage).date) {
+      if (message.date > (msg as ChatMessage).date) {
         break;
       }
       index -= 1;
     }
 
-    this._messages.insertWidget(
-      index,
-      new ChatMessage(messageContent, this._user)
-    );
-  }
+    this._messages.insertWidget(index, new ChatMessage(message, this._user));
+  };
 
   /**
    * Send a new message.
    * @param message - The message content.
    */
-  send = (message: string): void => {
+  send = (message: ChatPanel.IMessage): void => {
     if (!message) {
       return;
     }
-    console.log(this._user, message);
+    const msgStr = JSON.stringify(message);
+    if (this._send(msgStr)) {
+      this.onMessageReceived(msgStr);
+    }
+  };
+
+  /**
+   * Handle collaborator change.
+   */
+  private _onAwarenessChanged = () => {
+    const state = this._awareness.getStates() as any;
+    const collaborators: ICollaboratorAwareness[] = [];
+
+    state.forEach((value: ICollaboratorAwareness, key: any) => {
+      if (this._user.isReady && value.user.name !== this._user.identity!.name) {
+        collaborators.push(value);
+      }
+    });
   };
 
   /**
@@ -75,7 +100,11 @@ export class ChatPanel extends SidePanel {
     input.contentEditable = 'true';
     input.onkeydown = (e: KeyboardEvent) => {
       if (e.key === 'Enter' && e.ctrlKey && input.textContent) {
-        this.send(input.textContent);
+        this.send({
+          user: this._user.identity,
+          date: new Date(),
+          content: input.textContent
+        });
         input.textContent = '';
       }
     };
@@ -99,7 +128,11 @@ export class ChatPanel extends SidePanel {
     button.classList.add('jp-Button');
     button.onclick = () => {
       if (input.textContent) {
-        this.send(input.textContent);
+        this.send({
+          user: this._user.identity,
+          date: new Date(),
+          content: input.textContent
+        });
         input.textContent = '';
       }
     };
@@ -111,6 +144,8 @@ export class ChatPanel extends SidePanel {
   }
 
   private _user: User.IManager;
+  private _awareness: Awareness;
+  private _send: (message: string) => boolean;
   private _messages = new Panel();
 }
 
@@ -147,14 +182,15 @@ class ChatMessage extends Widget {
     const header = document.createElement('div');
     const user = document.createElement('div');
     user.innerText =
-      currentUser.identity?.username === this._message.user.identity?.username
+      currentUser.identity?.username === this._message.user?.username
         ? 'You'
-        : this._message.user.identity?.display_name || '???';
-    user.style.color = this._message.user.identity?.color || 'inherit';
+        : this._message.user?.display_name || '???';
+    user.style.color = this._message.user?.color || 'inherit';
     header.append(user);
 
     const date = document.createElement('div');
     date.classList.add('jp-ChatPanel-messageDate');
+    console.log(this._message);
     date.innerText = `${this._message.date.toLocaleDateString()} ${this._message.date.toLocaleTimeString()}`;
     header.append(date);
     return header;
@@ -182,7 +218,9 @@ export namespace ChatPanel {
    * Options to use when building the chat panel.
    */
   export interface IOptions {
+    awareness: Awareness;
     currentUser: User.IManager;
+    send: (message: string) => boolean;
     translator?: ITranslator;
   }
 
@@ -190,7 +228,7 @@ export namespace ChatPanel {
    * The message content.
    */
   export interface IMessage {
-    user: User.IManager;
+    user: User.IIdentity | null;
     date: Date;
     content: string;
   }

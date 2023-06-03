@@ -48,7 +48,8 @@ export class CollaboratorsPanel extends Panel {
   constructor(
     currentUser: User.IManager,
     awareness: Awareness,
-    fileopener: (path: string) => void
+    fileopener: (path: string) => void,
+    offerConnection: (name: string) => void
   ) {
     super({});
 
@@ -58,7 +59,7 @@ export class CollaboratorsPanel extends Panel {
 
     this.addClass(COLLABORATORS_PANEL_CLASS);
 
-    this._body = new CollaboratorsBody(fileopener);
+    this._body = new CollaboratorsBody(fileopener, offerConnection);
     this.addWidget(this._body);
     this.update();
 
@@ -72,6 +73,7 @@ export class CollaboratorsPanel extends Panel {
     const state = this._awareness.getStates() as any;
     const collaborators: ICollaboratorAwareness[] = [];
 
+    console.log('STATE', state);
     state.forEach((value: ICollaboratorAwareness, key: any) => {
       if (
         this._currentUser.isReady &&
@@ -91,10 +93,15 @@ export class CollaboratorsPanel extends Panel {
 export class CollaboratorsBody extends ReactWidget {
   private _collaborators: ICollaboratorAwareness[] = [];
   private _fileopener: (path: string) => void;
+  private _offerConnection: (name: string) => void;
 
-  constructor(fileopener: (path: string) => void) {
+  constructor(
+    fileopener: (path: string) => void,
+    offerConnection: (name: string) => void
+  ) {
     super();
     this._fileopener = fileopener;
+    this._offerConnection = offerConnection;
     this.addClass(COLLABORATORS_LIST_CLASS);
   }
 
@@ -131,6 +138,10 @@ export class CollaboratorsBody extends ReactWidget {
         }
       };
 
+      const onChat = (user: string) => {
+        this._offerConnection(user);
+      };
+
       const displayName = `${value.user.display_name} ${separator} ${current}`;
 
       return (
@@ -150,6 +161,7 @@ export class CollaboratorsBody extends ReactWidget {
             <span>{value.user.initials}</span>
           </div>
           <span>{displayName}</span>
+          <button onClick={() => onChat(value.user.username)}>chat</button>
         </div>
       );
     });

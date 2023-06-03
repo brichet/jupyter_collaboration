@@ -8,7 +8,7 @@ from jupyter_server.extension.application import ExtensionApp
 from traitlets import Float, Type
 from ypy_websocket.ystore import BaseYStore
 
-from .handlers import DocSessionHandler, YDocWebSocketHandler
+from .handlers import ChatWebSocketHandler, DocSessionHandler, YDocWebSocketHandler
 from .loaders import FileLoaderMapping
 from .stores import SQLiteYStore
 from .utils import EVENTS_SCHEMA_PATH
@@ -98,6 +98,7 @@ class YDocExtension(ExtensionApp):
                     },
                 ),
                 (r"/api/collaboration/session/(.*)", DocSessionHandler),
+                (r"/api/collaboration/chat", ChatWebSocketHandler),
             ]
         )
 

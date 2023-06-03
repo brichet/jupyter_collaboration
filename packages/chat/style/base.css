@@ -35,7 +35,7 @@
   max-height: 20%;
 }
 
-.jp-ChatPanel-prompt div[role="textarea"] {
+.jp-ChatPanel-prompt div:first-child {
   font-size: var(--jp-ui-font-size1);
   flex-grow: 1;
   resize: none;

@@ -24,6 +24,7 @@ import {
   UserInfoPanel,
   UserMenu
 } from '@jupyter/collaboration';
+import { CommandIDs as ChatCommands } from '@jupyter/chat';
 import { SidePanel, usersIcon } from '@jupyterlab/ui-components';
 import { Menu, MenuBar } from '@lumino/widgets';
 import { URLExt } from '@jupyterlab/coreutils';
@@ -161,10 +162,15 @@ export const rtcPanelPlugin: JupyterFrontEndPlugin<void> = {
       void app.commands.execute('docmanager:open', { path });
     };
 
+    const offerConnection = (user: string) => {
+      void app.commands.execute(ChatCommands.offer, { user });
+    };
+
     const collaboratorsPanel = new CollaboratorsPanel(
       user,
       awareness,
-      fileopener
+      fileopener,
+      offerConnection
     );
     collaboratorsPanel.title.label = trans.__('Online Collaborators');
     userPanel.addWidget(collaboratorsPanel);

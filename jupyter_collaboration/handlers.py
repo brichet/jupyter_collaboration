@@ -322,3 +322,59 @@ class DocSessionHandler(APIHandler):
         )
         self.set_status(201)
         return self.finish(data)
+
+class ChatWebSocketHandler(WebSocketHandler, JupyterHandler):
+
+    _users: dict[str, ChatWebSocketHandler] = {}
+
+    def initialize(self):
+        self.username = ''
+
+    async def on_message(self, message):
+        data = json.loads(message)
+
+        if data["type"] == "login":
+            username = data["name"]
+            self.username = username
+            self._users[username] = self
+            self.log.warn(self._users)
+        elif data["type"] == "offer":
+            self.log.warn(f"RECEIVED offer\n {message}\n")
+            username = data["name"]
+            if username in self._users.keys():
+
+                await self._users[username].send({
+                    "type": "offer",
+                    "offer": data["offer"],
+                    "name": self.username
+                    })
+            else:
+                self.log.warn("User does not exist")
+        elif data["type"] == "answer":
+            self.log.warn(f"RECEIVED answer\n {message}\n")
+            username = data["name"]
+            if username in self._users.keys():
+                await self._users[username].send({
+                    "type": "answer",
+                    "answer": data["answer"],
+                    "name": self.username
+                    })
+        elif data["type"] == "candidate":
+            self.log.warn(f"RECEIVED candidate\n {message}\n")
+            username = data["name"]
+            if username in self._users.keys():
+                await self._users[username].send({
+                    "type": "candidate",
+                    "candidate": data["candidate"]
+                })
+
+
+    async def send(self, message):
+        """
+        Send a message to the client.
+        """
+        # needed to be compatible with WebsocketServer (websocket.send)
+        try:
+            self.write_message(message, binary=False)
+        except Exception as e:
+            self.log.debug("Failed to write message", exc_info=e)
