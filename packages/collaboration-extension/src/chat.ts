@@ -17,8 +17,8 @@ import {
   CommandIDs,
   chatIcon,
   ChatPanel,
-  IRTCConnection,
-  RTCConnection
+  IWebRTCConnections,
+  WebRTCConnections
 } from '@jupyter/chat';
 import { IGlobalAwareness } from '@jupyter/collaboration';
 import { Awareness } from 'y-protocols/awareness';
@@ -26,14 +26,14 @@ import { Awareness } from 'y-protocols/awareness';
 /**
  * The webRTC provider.
  */
-export const webRTCConnection: JupyterFrontEndPlugin<IRTCConnection> = {
+export const webRTCConnection: JupyterFrontEndPlugin<IWebRTCConnections> = {
   id: '@jupyter/collaboration-extension:rtcProvider',
   description: 'The webRTC connection',
   autoStart: true,
-  provides: IRTCConnection,
-  activate: (app: JupyterFrontEnd): IRTCConnection => {
+  provides: IWebRTCConnections,
+  activate: (app: JupyterFrontEnd): IWebRTCConnections => {
     const { user } = app.serviceManager;
-    const connection = new RTCConnection();
+    const connection = new WebRTCConnections();
 
     Promise.all([app.restored, user.ready]).then(() => {
       connection.login(user.identity!.username);
@@ -48,13 +48,13 @@ export const webRTCConnection: JupyterFrontEndPlugin<IRTCConnection> = {
 export const chat: JupyterFrontEndPlugin<void> = {
   id: '@jupyter/collaboration-extension:chat',
   description: 'The default chat panel',
-  requires: [IGlobalAwareness, IRTCConnection],
+  requires: [IGlobalAwareness, IWebRTCConnections],
   optional: [ITranslator, ILayoutRestorer],
   autoStart: true,
   activate: (
     app: JupyterFrontEnd,
     awareness: Awareness,
-    rtcConnection: IRTCConnection,
+    webRTCConnection: IWebRTCConnections,
     translator: ITranslator,
     restorer: ILayoutRestorer
   ): void => {
@@ -65,10 +65,10 @@ export const chat: JupyterFrontEndPlugin<void> = {
       translator,
       currentUser: user,
       awareness: awareness,
-      send: rtcConnection.sendMessage
+      send: webRTCConnection.sendMessage
     });
 
-    rtcConnection.setReceivedMessage(panel.onMessageReceived);
+    webRTCConnection.setReceivedMessage(panel.onMessageReceived);
     panel.id = DOMUtils.createDomID();
     panel.title.caption = trans.__('Collaboration');
     panel.title.icon = chatIcon;
@@ -84,12 +84,12 @@ export const chat: JupyterFrontEndPlugin<void> = {
 export const chatCommands: JupyterFrontEndPlugin<void> = {
   id: '@jupyter/collaboration-extension:chat-commands',
   description: 'The default chat commands',
-  requires: [IRTCConnection],
+  requires: [IWebRTCConnections],
   optional: [ITranslator],
   autoStart: true,
   activate: (
     app: JupyterFrontEnd,
-    rtcConnection: IRTCConnection,
+    webRTCConnection: IWebRTCConnections,
     translator: ITranslator
   ) => {
     const { commands } = app;
@@ -100,9 +100,8 @@ export const chatCommands: JupyterFrontEndPlugin<void> = {
       execute: async args => {
         const user = (args?.user as string) || undefined;
         if (user) {
-          rtcConnection.handleConnection(user);
+          webRTCConnection.handleConnection(user);
         }
-        console.log(user);
       }
     });
   }

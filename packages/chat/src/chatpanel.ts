@@ -69,7 +69,7 @@ export class ChatPanel extends SidePanel {
       return;
     }
     const msgStr = JSON.stringify(message);
-    if (this._send(msgStr)) {
+    if (this._send(msgStr).indexOf(true) > -1) {
       this.onMessageReceived(msgStr);
     }
   };
@@ -145,7 +145,7 @@ export class ChatPanel extends SidePanel {
 
   private _user: User.IManager;
   private _awareness: Awareness;
-  private _send: (message: string) => boolean;
+  private _send: (message: string) => boolean[];
   private _messages = new Panel();
 }
 
@@ -220,7 +220,7 @@ export namespace ChatPanel {
   export interface IOptions {
     awareness: Awareness;
     currentUser: User.IManager;
-    send: (message: string) => boolean;
+    send: (message: string) => boolean[];
     translator?: ITranslator;
   }
 

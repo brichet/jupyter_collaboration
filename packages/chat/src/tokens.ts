@@ -10,13 +10,18 @@ export namespace CommandIDs {
   export const offer = 'chat:offer';
 }
 
-export interface IRTCConnection {
+export interface IWebRTCConnections {
   handleConnection(name: string): void;
-  sendMessage(message: string): void;
+  sendMessage(message: string): boolean[];
   setReceivedMessage(fct: (message: string) => void): void;
-  readonly connection: RTCPeerConnection;
+  readonly peers: Map<string, IPeer>;
 }
 
-export const IRTCConnection = new Token<IRTCConnection>(
+export interface IPeer {
+  connection?: RTCPeerConnection;
+  channel?: RTCDataChannel;
+}
+
+export const IWebRTCConnections = new Token<IWebRTCConnections>(
   '@jupyter/collaboration:IRTCConnection'
 );

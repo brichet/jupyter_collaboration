@@ -6,5 +6,5 @@
  */
 
 export * from './chatpanel';
-export * from './rtcConnection';
+export * from './webRTCConnections';
 export * from './tokens';

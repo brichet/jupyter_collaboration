@@ -365,7 +365,8 @@ class ChatWebSocketHandler(WebSocketHandler, JupyterHandler):
             if username in self._users.keys():
                 await self._users[username].send({
                     "type": "candidate",
-                    "candidate": data["candidate"]
+                    "candidate": data["candidate"],
+                    "name": self.username
                 })
 
 
