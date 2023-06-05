@@ -18,7 +18,7 @@ export class WebRTCConnections implements IWebRTCConnections {
     this._websocket = new WebSocket(url);
     this._websocket.onmessage = (message: MessageEvent) => {
       const data = JSON.parse(message.data);
-      console.log(data);
+      console.debug('ONMESSAGE', data);
       if (data) {
         switch (data.type) {
           case 'offer':
@@ -43,6 +43,10 @@ export class WebRTCConnections implements IWebRTCConnections {
     this._receivedMessage = fct;
   }
 
+  login(name: string) {
+    this._send({ type: 'login', name: name });
+  }
+
   sendMessage = (message: string): boolean[] => {
     const status: boolean[] = [];
     this._peers.forEach(peer => {
@@ -61,20 +65,15 @@ export class WebRTCConnections implements IWebRTCConnections {
     return status;
   };
 
-  login(name: string) {
-    this._send({ type: 'login', name: name });
-  }
-
-  handleConnection(name: string): void {
+  handleConnection = (name: string): boolean => {
     this._addConnection(name, true);
-    console.log('PEERS', this._peers);
-  }
+    return !!this._peers.get(name);
+  };
 
   onOffer(data: any) {
-    console.log('OFFER', data);
+    console.debug('OFFER', data);
     this._addConnection(data.name);
     const connection = this._peers.get(data.name)?.connection;
-    console.log('Connection found', connection);
     connection
       ?.setRemoteDescription(new RTCSessionDescription(data.offer))
       .then(() => connection.createAnswer())
@@ -89,25 +88,27 @@ export class WebRTCConnections implements IWebRTCConnections {
   }
 
   onAnswer(data: any) {
-    console.log('ANSWER', data);
+    console.debug('ANSWER', data);
     const connection = this._peers.get(data.name)?.connection;
-    console.log('Connection found', connection);
     connection?.setRemoteDescription(new RTCSessionDescription(data.answer));
   }
 
   onCandidate(data: any) {
-    console.log('ICE CANDIDATE', data);
+    console.debug('ICE CANDIDATE', data);
     const connection = this._peers.get(data.name)?.connection;
-    console.log('Connection found', connection);
     connection?.addIceCandidate(new RTCIceCandidate(data.candidate));
   }
 
   private _addConnection(name: string, createOffer = false) {
+    if (this._peers.get(name)?.connection) {
+      this._peers.delete(name);
+    }
+
     const connection = new RTCPeerConnection({
       iceServers: [{ urls: ['stun:stun.1.google.com:19302'] }]
     });
     connection.onicecandidate = data => {
-      console.log('ICE candidate received', data);
+      console.debug('ICE candidate received', data);
       if (data.candidate) {
         this._send({
           type: 'candidate',
@@ -117,12 +118,10 @@ export class WebRTCConnections implements IWebRTCConnections {
       }
     };
     connection.ondatachannel = event => {
-      console.log('Data Channel received', this._peers);
+      console.debug('Data Channel received', this._peers);
       this._addChannel(name, event.channel);
     };
     this._peers.set(name, { ...this._peers.get(name), connection });
-    console.log('Peer connection added', name, connection);
-    console.log('PEERS', this._peers);
     if (createOffer) {
       const dataChannel = connection.createDataChannel(UUID.uuid4());
       this._addChannel(name, dataChannel);
@@ -141,18 +140,15 @@ export class WebRTCConnections implements IWebRTCConnections {
 
   private _addChannel(name: string, channel: RTCDataChannel) {
     channel.onopen = () => {
-      console.log(`Data channel with ${name} ready.`);
+      console.debug(`Data channel with ${name} ready.`);
     };
     channel.onmessage = event => {
       this._receivedMessage(event.data);
     };
     channel.onclose = event => {
       this._peers.delete(name);
-      console.log('CLOSE PEERS', this._peers);
     };
     this._peers.set(name, { ...this._peers.get(name), channel });
-    console.log('Peer channel added', name, channel);
-    console.log('PEERS', this._peers);
   }
 
   private _send(data: any): void {

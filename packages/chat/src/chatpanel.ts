@@ -29,6 +29,7 @@ export class ChatPanel extends SidePanel {
     super({ content: new Panel(), translator: options.translator });
     this._user = options.currentUser;
     this._awareness = options.awareness;
+    this._handleConnection = options.handleConnection;
     this._send = options.send;
     this.addClass('jp-ChatPanel');
 
@@ -36,8 +37,6 @@ export class ChatPanel extends SidePanel {
     this.addWidget(this._messages);
     this.addWidget(new Widget({ node: this._prompt }));
 
-    console.log('USER', options.currentUser);
-    console.log('awarness', options.awareness);
     this._awareness.on('change', this._onAwarenessChanged);
   }
 
@@ -83,9 +82,17 @@ export class ChatPanel extends SidePanel {
 
     state.forEach((value: ICollaboratorAwareness, key: any) => {
       if (this._user.isReady && value.user.name !== this._user.identity!.name) {
-        collaborators.push(value);
+        if (!this._collaborators.includes(value)) {
+          if (this._handleConnection(value.user.username)) {
+            collaborators.push(value);
+          }
+        } else {
+          collaborators.push(value);
+        }
       }
     });
+
+    this._collaborators = collaborators;
   };
 
   /**
@@ -146,7 +153,9 @@ export class ChatPanel extends SidePanel {
   private _user: User.IManager;
   private _awareness: Awareness;
   private _send: (message: string) => boolean[];
+  private _handleConnection: (user: string) => boolean;
   private _messages = new Panel();
+  private _collaborators: ICollaboratorAwareness[] = [];
 }
 
 /**
@@ -190,7 +199,6 @@ class ChatMessage extends Widget {
 
     const date = document.createElement('div');
     date.classList.add('jp-ChatPanel-messageDate');
-    console.log(this._message);
     date.innerText = `${this._message.date.toLocaleDateString()} ${this._message.date.toLocaleTimeString()}`;
     header.append(date);
     return header;
@@ -220,6 +228,7 @@ export namespace ChatPanel {
   export interface IOptions {
     awareness: Awareness;
     currentUser: User.IManager;
+    handleConnection: (username: string) => boolean;
     send: (message: string) => boolean[];
     translator?: ITranslator;
   }

@@ -14,7 +14,6 @@ import { DOMUtils } from '@jupyterlab/apputils';
 import { ITranslator, nullTranslator } from '@jupyterlab/translation';
 
 import {
-  CommandIDs,
   chatIcon,
   ChatPanel,
   IWebRTCConnections,
@@ -65,7 +64,8 @@ export const chat: JupyterFrontEndPlugin<void> = {
       translator,
       currentUser: user,
       awareness: awareness,
-      send: webRTCConnection.sendMessage
+      send: webRTCConnection.sendMessage,
+      handleConnection: webRTCConnection.handleConnection
     });
 
     webRTCConnection.setReceivedMessage(panel.onMessageReceived);
@@ -75,34 +75,5 @@ export const chat: JupyterFrontEndPlugin<void> = {
     app.shell.add(panel, 'right', { rank: 300 });
 
     restorer.add(panel, 'chat-panel');
-  }
-};
-
-/**
- * The chat commands.
- */
-export const chatCommands: JupyterFrontEndPlugin<void> = {
-  id: '@jupyter/collaboration-extension:chat-commands',
-  description: 'The default chat commands',
-  requires: [IWebRTCConnections],
-  optional: [ITranslator],
-  autoStart: true,
-  activate: (
-    app: JupyterFrontEnd,
-    webRTCConnection: IWebRTCConnections,
-    translator: ITranslator
-  ) => {
-    const { commands } = app;
-    const trans = (translator ?? nullTranslator).load('jupyter_collaboration');
-
-    commands.addCommand(CommandIDs.offer, {
-      label: trans.__('Offer chat communication'),
-      execute: async args => {
-        const user = (args?.user as string) || undefined;
-        if (user) {
-          webRTCConnection.handleConnection(user);
-        }
-      }
-    });
   }
 };
