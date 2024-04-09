@@ -51,6 +51,13 @@ export class CollaborativeChatWidget extends DocumentWidget<
     this.content.dispose();
     super.dispose();
   }
+
+  /**
+   * The model for the widget.
+   */
+  get model(): CollaborativeChatModel | null {
+    return this.content.model as CollaborativeChatModel;
+  }
 }
 
 /**

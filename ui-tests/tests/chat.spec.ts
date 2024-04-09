@@ -4,7 +4,6 @@
  */
 
 import { expect, IJupyterLabPageFixture, test } from '@jupyterlab/galata';
-import type { User } from '@jupyterlab/services';
 import type { Locator } from '@playwright/test';
 
 const openPanel = async (page: IJupyterLabPageFixture): Promise<Locator> => {

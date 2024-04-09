@@ -82,7 +82,7 @@ export class CollaborativeChatModelFactory
    * @returns The name
    */
   get name(): string {
-    return 'chat-model';
+    return 'chat';
   }
 
   /**

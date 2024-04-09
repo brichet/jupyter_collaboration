@@ -50,13 +50,14 @@ export const chatDocument: JupyterFrontEndPlugin<IChatFileType> = {
   description: 'A document registration for collaborative chat',
   autoStart: true,
   requires: [IGlobalAwareness, IRenderMimeRegistry],
-  optional: [ICollaborativeDrive, IThemeManager],
+  optional: [ICollaborativeDrive, ILayoutRestorer, IThemeManager],
   provides: IChatFileType,
   activate: (
     app: JupyterFrontEnd,
     awareness: Awareness,
     rmRegistry: IRenderMimeRegistry,
     drive: ICollaborativeDrive | null,
+    restorer: ILayoutRestorer | null,
     themeManager: IThemeManager | null
   ): IChatFileType => {
     // Namespace for the tracker
@@ -91,7 +92,7 @@ export const chatDocument: JupyterFrontEndPlugin<IChatFileType> = {
     // our new DocumentWidget
     const widgetFactory = new ChatWidgetFactory({
       name: 'chat-factory',
-      modelName: 'chat-model',
+      modelName: 'chat',
       fileTypes: ['chat'],
       defaultFor: ['chat'],
       themeManager,
@@ -109,6 +110,16 @@ export const chatDocument: JupyterFrontEndPlugin<IChatFileType> = {
 
     // Registering the widget factory
     app.docRegistry.addWidgetFactory(widgetFactory);
+
+    // Handle state restoration.
+    if (restorer) {
+      void restorer.restore(tracker, {
+        command: 'docmanager:open',
+        args: panel => ({ path: panel.context.path, factory: 'chat-factory' }),
+        name: panel => panel.context.path,
+        when: app.serviceManager.ready
+      });
+    }
 
     return chatFileType;
   }
